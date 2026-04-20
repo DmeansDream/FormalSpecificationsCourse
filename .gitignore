@@ -56,3 +56,8 @@ nunit-*.xml
 /.vscode
 *.sln
 /testing
+Program.deps.json
+Program.dll
+Program.exe
+Program.runtimeconfig.json
+Program.pdb
