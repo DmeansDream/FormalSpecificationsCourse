@@ -47,6 +47,8 @@ module NFCSourceModule {
       ensures IsValid()
       ensures CurrentValue() >= 0
       ensures ID() == old(ID())
+      ensures OneRideWorth() == old(OneRideWorth()) 
+      ensures CurrentValue() == old(CurrentValue()) - old(OneRideWorth())
 
     // The cost of one ride on this specific source type
     // (fare for PaymentCard, 1 for RiderPass)

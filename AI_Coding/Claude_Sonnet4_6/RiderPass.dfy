@@ -103,6 +103,7 @@ module RiderPassModule {
       ensures result == Success
       
       ensures IsValid()
+      ensures OneRideWorth() == old(OneRideWorth()) 
       ensures ridesRemaining == old(ridesRemaining) - 1
       ensures CurrentValue() == old(ridesRemaining) - 1
       ensures CurrentValue() >= 0

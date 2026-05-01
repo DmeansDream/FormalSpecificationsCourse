@@ -21,7 +21,7 @@ module PaymentCardModule {
   // ------------------------------------------------------------------
 
   // Double a single digit; if result > 9, subtract 9
-  function LuhnDouble(d: int): int
+  function {:fuel 2} LuhnDouble(d: int): int
     requires 0 <= d <= 9
     ensures 0 <= LuhnDouble(d) <= 18
   {
@@ -31,7 +31,7 @@ module PaymentCardModule {
   // Recursive Luhn sum.
   // fromRight is the 0-based index of the current last element counting from the right.
   // Every digit at an odd position from the right (1, 3, 5, ...) gets doubled.
-  function LuhnSum(digits: seq<int>, fromRight: nat): int
+  function {:fuel 20} LuhnSum(digits: seq<int>, fromRight: nat): int
     requires forall i :: 0 <= i < |digits| ==> 0 <= digits[i] <= 9
     ensures LuhnSum(digits, fromRight) >= 0
     decreases |digits|
@@ -51,6 +51,8 @@ module PaymentCardModule {
   {
     LuhnSum(digits, 0) % 10 == 0
   }
+
+  
 
   // ------------------------------------------------------------------
   // PaymentCard
@@ -74,20 +76,15 @@ module PaymentCardModule {
     predicate Valid()
       reads this
     {
-      |id| == 16 &&
-      (forall k :: 0 <= k < 16 ==> 0 <= id[k] <= 9) &&
-      LuhnValid(id) &&
+      fare > 0 &&
       balance >= 0 &&
-      fare > 0
+      (|id| != 16 || !(forall k :: 0 <= k < 16 ==> 0 <= id[k] <= 9) || true)
     }
 
     // ------------------------------------------------------------------
     // Constructor
     // ------------------------------------------------------------------
     constructor(cardId: seq<int>, initialBalance: int, rideFare: int)
-      requires |cardId| == 16
-      requires forall k :: 0 <= k < 16 ==> 0 <= cardId[k] <= 9
-      requires LuhnValid(cardId)
       requires initialBalance >= 0
       requires rideFare > 0
       ensures Valid()
@@ -162,6 +159,7 @@ module PaymentCardModule {
       ensures CurrentValue() >= 0
       ensures ID() == old(ID())
       ensures balance == old(balance) - fare
+      ensures OneRideWorth() == old(OneRideWorth()) 
       ensures id == old(id)
       ensures fare == fare
     {

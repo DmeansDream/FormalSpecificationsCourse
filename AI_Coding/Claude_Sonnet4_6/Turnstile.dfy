@@ -169,6 +169,7 @@ module TurnstileModule {
       ensures tripod.IsClosed()
       ensures Valid()
       ensures tripod == old(tripod)
+      ensures old(source.IsValid()) ==> source.IsValid()
       
       // Spec req 15: invalid source always yields Denied
       ensures !old(source.IsValid()) ==> result == Denied
@@ -184,6 +185,40 @@ module TurnstileModule {
           source.CurrentValue() == old(source.CurrentValue())
       ensures result == Denied ==>
                 state == GateClosed
+
+      // ── ADMITTED: complete characterisation (req 9) ──────────────────────────
+      // Valid + funds + passenger walked  =>  Admitted
+      ensures (old(source.IsValid()) && old(source.HasSufficientFunds()) && passengerDetected)
+              ==> result == Admitted
+      // Admitted  =>  passenger actually walked (no phantom admissions)
+      ensures result == Admitted ==> passengerDetected
+      // Admitted  =>  the source was valid and funded (no free rides)
+      ensures result == Admitted ==> old(source.IsValid())
+      ensures result == Admitted ==> old(source.HasSufficientFunds())
+
+      // ── TIMEDOUT: complete characterisation (req 10) ─────────────────────────
+      // Valid + funds + NO passenger  =>  TimedOut
+      ensures (old(source.IsValid()) && old(source.HasSufficientFunds()) && !passengerDetected)
+              ==> result == TimedOut
+      // TimedOut  =>  passenger did NOT walk
+      ensures result == TimedOut ==> !passengerDetected
+      // TimedOut  =>  source was valid and funded
+      ensures result == TimedOut ==> old(source.IsValid())
+      ensures result == TimedOut ==> old(source.HasSufficientFunds())
+
+      // ── Value mutation: exactly one deduction on non-Denied results (req 5, 6) ─
+      // After Admitted or TimedOut the value must have dropped by exactly one fare
+      // (relies on the NFCSource trait postcondition for Deduct())
+      //ensures (result == Admitted || result == TimedOut) && (source.IsValid())==>
+      //    source.CurrentValue() == old(source.CurrentValue()) - old(source.OneRideWorth())
+
+      ensures (old(source.IsValid()) && old(source.HasSufficientFunds())) ==>
+          source.CurrentValue() == old(source.CurrentValue()) - old(source.OneRideWorth())
+
+      // ── Completeness: result is *always* one of the three values ─────────────
+      // (Dafny's datatype exhaustiveness handles this, but spelling it out is
+      //  useful documentation and lets the verifier close the proof trivially.)
+      ensures result == Denied || result == Admitted || result == TimedOut
       
     {
       // Step 1 & 2: validate source format and funds
