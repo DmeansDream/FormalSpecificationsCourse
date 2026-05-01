@@ -87,6 +87,7 @@ module RiderPassModule {
     // Spec req 6: rides remaining always >= 0
     function CurrentValue(): int
       reads this
+      requires IsValid()
       ensures CurrentValue() >= 0
     {
       ridesRemaining
@@ -95,22 +96,42 @@ module RiderPassModule {
     // Spec req 5: deduct exactly 1 ride
     // Spec req 6: ridesRemaining stays >= 0 (guaranteed because HasSufficientFunds requires > 0)
     // Spec req 7: only called on success path
-    method Deduct() returns (result: DeductResult)
+     method Deduct() returns (result: DeductResult)
       requires IsValid()
       requires HasSufficientFunds()
       modifies this
       ensures result == Success
-      ensures CurrentValue() == old(CurrentValue()) - old(OneRideWorth())
-      ensures CurrentValue() >= 0
+      
       ensures IsValid()
+      ensures ridesRemaining == old(ridesRemaining) - 1
+      ensures CurrentValue() == old(ridesRemaining) - 1
+      ensures CurrentValue() >= 0
+      ensures ID() == old(ID())
       ensures ridesRemaining == old(ridesRemaining) - 1
       ensures passId == old(passId)
     {
-      // Spec req 5: deduct exactly 1
+      // Snapshot all passId-related invariant facts as ghost variables
+      // BEFORE the mutation so Dafny can carry them across the heap update.
+      ghost var oldPassId   := passId;
+      ghost var oldRides    := ridesRemaining;
+
+      // Spec req 5: deduct exactly 1 ride.
+      // Since HasSufficientFunds() ==> ridesRemaining > 0,
+      // we get ridesRemaining - 1 >= 0, satisfying spec req 6.
       ridesRemaining := ridesRemaining - 1;
+
+      // Frame reasoning hints:
+      //   passId was not assigned in this method body, so passId == oldPassId.
+      //   All properties of passId therefore carry over unchanged.
+      assert passId == oldPassId;
+      assert |passId| == 8;
+      // Explicitly assert the digit range forall so Dafny's quantifier
+      // instantiation can confirm IsValid() for the passId component.
+      assert forall k :: 0 <= k < 8 ==> 0 <= passId[k] <= 9;
+      assert ridesRemaining == oldRides - 1;
+      assert ridesRemaining >= 0;
+
       result := Success;
-      // Dafny can verify:
-      //   ridesRemaining = old(ridesRemaining) - 1 >= 1 - 1 = 0   (since old(ridesRemaining) > 0)
     }
   }
 }

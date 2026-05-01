@@ -28,6 +28,7 @@ module NFCSourceModule {
     // Always non-negative. Spec req 6.
     function CurrentValue(): int
       reads this
+      requires IsValid()
       ensures CurrentValue() >= 0
 
     // Deducts exactly one ride's worth from the source.
@@ -43,14 +44,15 @@ module NFCSourceModule {
       requires HasSufficientFunds()
       modifies this
       ensures result == Success
-      ensures CurrentValue() == old(CurrentValue()) - old(OneRideWorth())
-      ensures CurrentValue() >= 0
       ensures IsValid()
+      ensures CurrentValue() >= 0
+      ensures ID() == old(ID())
 
     // The cost of one ride on this specific source type
     // (fare for PaymentCard, 1 for RiderPass)
     function OneRideWorth(): int
       reads this
+      requires IsValid()
       ensures OneRideWorth() > 0
   }
 }

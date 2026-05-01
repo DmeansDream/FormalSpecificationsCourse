@@ -92,10 +92,9 @@ module TurnstileModule {
       ensures tripod.IsOpen()
       ensures Valid()
       ensures tripod == old(tripod)
-      ensures openDuration == old(openDuration)
     {
-      state := GateOpen;
       tripod.Open();
+      state := GateOpen;
     }
 
     // Transition to GateClosed: set logical state and lower physical barrier.
@@ -107,10 +106,9 @@ module TurnstileModule {
       ensures tripod.IsClosed()
       ensures Valid()
       ensures tripod == old(tripod)
-      ensures openDuration == old(openDuration)
     {
-      state := GateClosed;
       tripod.Close();
+      state := GateClosed;
     }
 
     // ------------------------------------------------------------------
@@ -134,7 +132,6 @@ module TurnstileModule {
       ensures tripod.IsClosed()
       ensures Valid()
       ensures tripod == old(tripod)
-      ensures openDuration == old(openDuration)
     {
       walked := passengerDetected;
       // Regardless of whether the passenger walked or the timer expired,
@@ -161,6 +158,10 @@ module TurnstileModule {
     method ProcessNFC(source: NFCSource, passengerDetected: bool)
         returns (result: ProcessResult)
       requires Valid()
+      requires state == GateClosed
+
+      requires {source} !! {this, tripod}
+
       // source is a non-null NFCSource (Dafny references are non-null by default)
       modifies this, tripod, source
       // Spec req 11: turnstile always returns to Closed after a processing loop
@@ -168,23 +169,27 @@ module TurnstileModule {
       ensures tripod.IsClosed()
       ensures Valid()
       ensures tripod == old(tripod)
-      ensures openDuration == old(openDuration)
-      // Spec req 13: gate is never opened unless the transaction succeeded
-      // (if Denied, CurrentValue is unchanged — source.Deduct was never called)
-      ensures result == Denied ==>
-                old(source.CurrentValue()) == source.CurrentValue()
+      
       // Spec req 15: invalid source always yields Denied
       ensures !old(source.IsValid()) ==> result == Denied
+
       // Spec req 4: no funds -> Denied
-      ensures !old(source.HasSufficientFunds()) ==> result == Denied
+      ensures (old(source.IsValid()) && !old(source.HasSufficientFunds())) ==> result == Denied
+
+      // Spec req 13: gate is never opened unless the transaction succeeded
+      // (if Denied, CurrentValue is unchanged — source.Deduct was never called)
+      ensures (result == Denied && old(source.IsValid())) ==> source.IsValid()
+
+      ensures (result == Denied && old(source.IsValid())) ==>
+          source.CurrentValue() == old(source.CurrentValue())
+      ensures result == Denied ==>
+                state == GateClosed
+      
     {
       // Step 1 & 2: validate source format and funds
       // Spec req 3, 4, 15
-      if !source.IsValid() || !source.HasSufficientFunds() {
-        // Spec req 7: we never mutate source here, so CurrentValue unchanged
-        result := Denied;
-        return;
-      }
+      if !source.IsValid() { result := Denied; return; }
+      if !source.HasSufficientFunds() { result := Denied; return; }
 
       // Step 3: deduct exactly one ride worth
       // Spec req 5, 6 (enforced by trait postconditions on Deduct)

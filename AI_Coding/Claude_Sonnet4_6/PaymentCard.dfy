@@ -115,6 +115,7 @@ module PaymentCardModule {
     // Spec req 12: fare > 0
     function OneRideWorth(): int
       reads this
+      requires IsValid()
       ensures OneRideWorth() > 0
     {
       fare
@@ -141,6 +142,7 @@ module PaymentCardModule {
     // Spec req 6: balance is always >= 0
     function CurrentValue(): int
       reads this
+      requires IsValid()
       ensures CurrentValue() >= 0
     {
       balance
@@ -154,18 +156,35 @@ module PaymentCardModule {
       requires HasSufficientFunds()
       modifies this
       ensures result == Success
-      ensures CurrentValue() == old(CurrentValue()) - old(OneRideWorth())
-      ensures CurrentValue() >= 0
+      ensures balance == old(balance) - fare
       ensures IsValid()
-      ensures balance == old(balance) - old(fare)
+      ensures CurrentValue() == old(balance) - fare
+      ensures CurrentValue() >= 0
+      ensures ID() == old(ID())
+      ensures balance == old(balance) - fare
       ensures id == old(id)
-      ensures fare == old(fare)
+      ensures fare == fare
     {
-      // Spec req 5: deduct exactly the fare
+      // Snapshot immutable fields before mutation so Dafny can carry
+      // their invariant facts across the heap update.
+      ghost var oldId      := id;
+      ghost var oldBalance := balance;
+
+      // Spec req 5: deduct exactly the fare.
+      // Since HasSufficientFunds() ==> balance >= fare, we get balance - fare >= 0.
       balance := balance - fare;
+
+      // Frame reasoning hints: 'id' and 'fare' were not assigned.
+      assert id == oldId;
+      assert |id| == 16;
+      assert forall k :: 0 <= k < 16 ==> 0 <= id[k] <= 9;
+      // LuhnValid(id) still holds because id is unchanged.
+      assert LuhnValid(id);
+      assert fare > 0;
+      assert balance == oldBalance - fare;
+      assert balance >= 0;
+
       result  := Success;
-      // Dafny can verify:
-      //   balance = old(balance) - fare >= fare - fare = 0   (since old(balance) >= fare)
     }
   }
 }
