@@ -40,7 +40,7 @@ module TurnstileModule {
   class Turnstile {
 
     // The physical tripod barrier object
-    var tripod: Tripod
+    const tripod: Tripod
 
     // The logical gate state of the turnstile
     var state: TurnstileState
@@ -91,7 +91,6 @@ module TurnstileModule {
       ensures state == GateOpen
       ensures tripod.IsOpen()
       ensures Valid()
-      ensures tripod == old(tripod)
     {
       tripod.Open();
       state := GateOpen;
@@ -105,7 +104,6 @@ module TurnstileModule {
       ensures state == GateClosed
       ensures tripod.IsClosed()
       ensures Valid()
-      ensures tripod == old(tripod)
     {
       tripod.Close();
       state := GateClosed;
@@ -131,7 +129,6 @@ module TurnstileModule {
       ensures state == GateClosed     // Spec req 9 & 10: always closed after
       ensures tripod.IsClosed()
       ensures Valid()
-      ensures tripod == old(tripod)
     {
       walked := passengerDetected;
       // Regardless of whether the passenger walked or the timer expired,
@@ -168,7 +165,6 @@ module TurnstileModule {
       ensures state == GateClosed
       ensures tripod.IsClosed()
       ensures Valid()
-      ensures tripod == old(tripod)
       ensures old(source.IsValid()) ==> source.IsValid()
       
       // Spec req 15: invalid source always yields Denied
@@ -218,8 +214,7 @@ module TurnstileModule {
       // ── Completeness: result is *always* one of the three values ─────────────
       // (Dafny's datatype exhaustiveness handles this, but spelling it out is
       //  useful documentation and lets the verifier close the proof trivially.)
-      ensures result == Denied || result == Admitted || result == TimedOut
-      
+      ensures result == Denied || result == Admitted || result == TimedOut 
     {
       // Step 1 & 2: validate source format and funds
       // Spec req 3, 4, 15
