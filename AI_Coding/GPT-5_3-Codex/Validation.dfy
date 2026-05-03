@@ -3,10 +3,9 @@ predicate IsDigit(c: char)
   '0' <= c <= '9'
 }
 
-function method DigitValue(c: char): nat
-  requires IsDigit(c)
+function DigitValue(c: char): nat
 {
-  (c as int - '0' as int) as nat
+  if IsDigit(c) then (c as int - '0' as int) as nat else 0
 }
 
 predicate DigitsOnly(s: string)
@@ -15,12 +14,12 @@ predicate DigitsOnly(s: string)
   |s| == 0 || (IsDigit(s[0]) && DigitsOnly(s[1..]))
 }
 
-function method LuhnDouble(d: nat): nat
+function LuhnDouble(d: nat): nat
 {
   if d * 2 > 9 then d * 2 - 9 else d * 2
 }
 
-function method LuhnSumFromLeft(s: string, idx: nat): nat
+function LuhnSumFromLeft(s: string, idx: nat): nat
   requires DigitsOnly(s)
   requires idx <= |s|
   decreases |s| - idx

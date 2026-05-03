@@ -1,25 +1,31 @@
-//include "Sources.dfy"
+include "Sources.dfy"
 
 datatype TurnstileState =
   | Open
   | Closed
 
 class Turnstile {
-  var fare: nat
+  const fare: nat
   var state: TurnstileState
   var tripodOpen: bool
   var openTicksRemaining: nat
 
-  invariant fare > 0.0
-  invariant tripodOpen <==> state == Open
-  invariant state == Open ==> openTicksRemaining > 0
+  predicate StateConsistent()
+    reads this
+  {
+    fare > 0 &&
+    (tripodOpen <==> state == Open) &&
+    (state == Open ==> openTicksRemaining > 0) &&
+    (state == Closed ==> openTicksRemaining == 0)
+  }
 
-  constructor(initialFare: nat)
+  constructor(initialFare: nat) 
     requires initialFare > 0
     ensures fare == initialFare
     ensures state == Closed
     ensures !tripodOpen
     ensures openTicksRemaining == 0
+    ensures StateConsistent()
   {
     fare := initialFare;
     state := Closed;
@@ -27,7 +33,7 @@ class Turnstile {
     openTicksRemaining := 0;
   }
 
-  function method SourceObjects(src: NfcSource): set<object>
+  function SourceObjects(src: NfcSource): set<object>
   {
     match src
     case PaymentSource(card) => {card}
@@ -36,28 +42,38 @@ class Turnstile {
   }
 
   method AttemptTransaction(src: NfcSource) returns (success: bool)
+    requires StateConsistent()
     modifies SourceObjects(src)
-    ensures src.UnknownSource? ==> !success
-    ensures src.PaymentSource? && !success ==> src.card.balance == old(src.card.balance)
-    ensures src.PassSource? && !success ==> src.pass.rides == old(src.pass.rides)
-    ensures src.PaymentSource? && success ==> src.card.balance + fare == old(src.card.balance)
-    ensures src.PassSource? && success ==> src.pass.rides + 1 == old(src.pass.rides)
+    ensures StateConsistent()
+    ensures match src
+      case PaymentSource(card) => success <==> old(card.Valid()) && old(card.balance) >= fare
+      case PassSource(pass) => success <==> old(pass.Valid()) && old(pass.rides) > 0
+      case UnknownSource => !success
+    ensures match src
+      case PaymentSource(card) => !success ==> card.balance == old(card.balance)
+      case PassSource(pass) => !success ==> pass.rides == old(pass.rides)
+      case UnknownSource => true
+    ensures match src
+      case PaymentSource(card) => success ==> card.balance + fare == old(card.balance)
+      case PassSource(pass) => success ==> pass.rides + 1 == old(pass.rides)
+      case UnknownSource => true
   {
     match src
     case PaymentSource(card) =>
-      success := card.TryCharge(fare)
+      success := card.TryCharge(fare);
     case PassSource(pass) =>
-      success := pass.TryUseRide()
+      success := pass.TryUseRide();
     case UnknownSource =>
-      success := false
+      success := false;
   }
 
   method Close()
+    requires StateConsistent()
     modifies this
+    ensures StateConsistent()
     ensures state == Closed
     ensures !tripodOpen
     ensures openTicksRemaining == 0
-    ensures fare == old(fare)
   {
     state := Closed;
     tripodOpen := false;
@@ -66,11 +82,12 @@ class Turnstile {
 
   method OpenForTicks(ticks: nat)
     requires ticks > 0
+    requires StateConsistent()
     modifies this
+    ensures StateConsistent()
     ensures state == Open
     ensures tripodOpen
     ensures openTicksRemaining == ticks
-    ensures fare == old(fare)
   {
     state := Open;
     tripodOpen := true;
@@ -79,18 +96,20 @@ class Turnstile {
 
   method PassengerPassed()
     requires state == Open
+    requires StateConsistent()
     modifies this
+    ensures StateConsistent()
     ensures state == Closed
     ensures !tripodOpen
     ensures openTicksRemaining == 0
-    ensures fare == old(fare)
   {
     Close();
   }
 
   method Tick()
+    requires StateConsistent()
     modifies this
-    ensures fare == old(fare)
+    ensures StateConsistent()
     ensures old(state) == Closed ==> state == Closed
     ensures old(state) == Open ==> state == Closed || openTicksRemaining < old(openTicksRemaining)
   {
@@ -103,36 +122,94 @@ class Turnstile {
     }
   }
 
-  method ProcessSource(src: NfcSource, passengerWalked: bool, timeoutTicks: nat) returns (opened: bool)
+  method ProcessSource(src: NfcSource, passengerWalked: bool, timeoutTicks: nat) returns (result: bool)
     requires timeoutTicks > 0
+    requires StateConsistent()
     modifies this, SourceObjects(src)
+    ensures StateConsistent()
     ensures state == Closed
     ensures !tripodOpen
     ensures openTicksRemaining == 0
-    ensures fare == old(fare)
-    ensures src.UnknownSource? ==> !opened
-    ensures src.PaymentSource? && !opened ==> src.card.balance == old(src.card.balance)
-    ensures src.PassSource? && !opened ==> src.pass.rides == old(src.pass.rides)
+    ensures match src
+      case PaymentSource(card) => result <==> old(card.Valid()) && old(card.balance) >= fare
+      case PassSource(pass) => result <==> old(pass.Valid()) && old(pass.rides) > 0
+      case UnknownSource => !result
+    ensures match src
+      case PaymentSource(card) => !result ==> card.balance == old(card.balance)
+      case PassSource(pass) => !result ==> pass.rides == old(pass.rides)
+      case UnknownSource => true
+    ensures match src
+      case PaymentSource(card) => result ==> card.balance + fare == old(card.balance)
+      case PassSource(pass) => result ==> pass.rides + 1 == old(pass.rides)
+      case UnknownSource => true
   {
-    opened := AttemptTransaction(src);
+    match src
+    case PaymentSource(card) =>
+      var valid0 := card.Valid();
+      var bal0 := card.balance;
+      result := AttemptTransaction(src);
+      assert result <==> valid0 && bal0 >= fare;
 
-    if opened {
-      OpenForTicks(timeoutTicks);
-
-      if passengerWalked {
-        PassengerPassed();
-      } else {
-        while state == Open
-          decreases openTicksRemaining
-          invariant fare > 0
-          invariant tripodOpen <==> state == Open
-          invariant state == Open ==> openTicksRemaining > 0
-        {
-          Tick();
+      if result {
+        assert card.balance + fare == bal0;
+        OpenForTicks(timeoutTicks);
+        if passengerWalked {
+          PassengerPassed();
+        } else {
+          while state == Open
+            modifies this
+            decreases openTicksRemaining
+            invariant StateConsistent()
+          {
+            Tick();
+          }
         }
+      } else {
+        assert card.balance == bal0;
+        Close();
       }
-    } else {
+
+      if result {
+        assert card.balance + fare == bal0;
+      } else {
+        assert card.balance == bal0;
+      }
+
+    case PassSource(pass) =>
+      var valid0 := pass.Valid();
+      var rides0 := pass.rides;
+      result := AttemptTransaction(src);
+      assert result <==> valid0 && rides0 > 0;
+
+      if result {
+        assert pass.rides + 1 == rides0;
+        OpenForTicks(timeoutTicks);
+        if passengerWalked {
+          PassengerPassed();
+        } else {
+          while state == Open
+            modifies this
+            decreases openTicksRemaining
+            invariant StateConsistent()
+          {
+            Tick();
+          }
+        }
+      } else {
+        assert pass.rides == rides0;
+        Close();
+      }
+
+      if result {
+        assert pass.rides + 1 == rides0;
+      } else {
+        assert pass.rides == rides0;
+      }
+
+    case UnknownSource =>
+      result := AttemptTransaction(src);
+      assert !result;
       Close();
-    }
   }
+
 }

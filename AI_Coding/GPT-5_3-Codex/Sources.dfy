@@ -1,4 +1,4 @@
-//include "Validation.dfy"
+include "Validation.dfy"
 
 class RiderPass {
   var id: string
