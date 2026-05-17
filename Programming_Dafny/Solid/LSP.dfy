@@ -9,6 +9,29 @@ trait Card
         ensures 1 <= Value() <= 14
 }
 
+class Default extends Card
+{
+    const rank : int
+    ghost predicate Valid()
+        reads this
+    {
+        true
+    }
+    constructor(r : int)
+        ensures r == rank
+    {
+        rank := r;
+    }
+
+    function Value() : int
+        reads this
+        requires Valid()
+        ensures 1 <= Value() <= 14
+    {
+        rank % 14 + 1
+    }
+}
+
 class NumberCard extends Card
 {
     const rank : int
@@ -93,7 +116,7 @@ function RankToFace(rank: int): FaceRank
   case 13 => King
 }
 
-/*class Joker extends Card
+class Joker extends Card
 {
     const rank : int
 
@@ -119,7 +142,7 @@ function RankToFace(rank: int): FaceRank
     {
         rank
     }
-}*/
+}
 
 method SumOfHand(cards : seq<Card>) returns (sum : int)
     requires 0 < |cards|
@@ -135,6 +158,21 @@ method SumOfHand(cards : seq<Card>) returns (sum : int)
         var v := cards[i].Value();
         sum := sum + v;
         i := i + 1;
+    }
+}
+
+method ShowRank(card : Card)
+    requires card.Valid()
+{
+    if card is NumberCard
+    {
+        var num := card as NumberCard;
+        print num.Value(), "\n";
+    }
+    else if card is FaceCard
+    {
+        var faceCard := card as FaceCard;
+        print faceCard.face, "\n";
     }
 }
 

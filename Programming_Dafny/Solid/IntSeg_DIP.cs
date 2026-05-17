@@ -17,11 +17,11 @@ method Main(_noArgsParameter: seq<seq<char>>)
   var flat := new FlatFeePolicy(0.5);
   var service1 := new CardService(flat);
   var remaining, fee := service1.ProcessPayment(200.0);
-  print ""Remaining bal :"", remaining, "" Fee: "", fee, ""\n"";
+  print ""Remaining bal: "", remaining, "" Fee: "", fee, ""\n"";
   var perc := new PercentageFeePolicy(0.5);
   var service2 := new CardService(perc);
   var remaining2, fee2 := service2.ProcessPayment(200.0);
-  print ""Remaining bal :"", remaining2, "" Fee: "", fee2, ""\n"";
+  print ""Remaining bal: "", remaining2, "" Fee: "", fee2, ""\n"";
 }
 
 trait ServicePolicy {
@@ -5824,7 +5824,7 @@ namespace _module {
       (_1_service1).ProcessPayment(new Dafny.BigRational(BigInteger.Parse("200"), BigInteger.One), out _out0, out _out1);
       _2_remaining = _out0;
       _3_fee = _out1;
-      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Remaining bal :")).ToVerbatimString(false));
+      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Remaining bal: ")).ToVerbatimString(false));
       Dafny.Helpers.Print((_2_remaining));
       Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString(" Fee: ")).ToVerbatimString(false));
       Dafny.Helpers.Print((_3_fee));
@@ -5844,7 +5844,7 @@ namespace _module {
       (_5_service2).ProcessPayment(new Dafny.BigRational(BigInteger.Parse("200"), BigInteger.One), out _out2, out _out3);
       _6_remaining2 = _out2;
       _7_fee2 = _out3;
-      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Remaining bal :")).ToVerbatimString(false));
+      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Remaining bal: ")).ToVerbatimString(false));
       Dafny.Helpers.Print((_6_remaining2));
       Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString(" Fee: ")).ToVerbatimString(false));
       Dafny.Helpers.Print((_7_fee2));

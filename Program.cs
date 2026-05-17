@@ -1,4 +1,4 @@
-// Dafny program the_program compiled into C#
+// Dafny program Program.dfy compiled into C#
 // To recompile, you will need the libraries
 //     System.Runtime.Numerics.dll System.Collections.Immutable.dll
 // but the 'dotnet' tool in .NET should pick those up automatically.
@@ -9,34 +9,37 @@ using System;
 using System.Numerics;
 using System.Collections;
 [assembly: DafnyAssembly.DafnySourceAttribute(@"// dafny 4.11.0.0
-// Command-line arguments: run Program.dfy --input Turnstile.dfy --input CardClasses.dfy
-// the_program
+// Command-line arguments: run Program.dfy
+// Program.dfy
 
 method Main(_noArgsParameter: seq<seq<char>>)
 {
   var turnstile := new Turnstile(Boot, 20.0);
   var pass := new RiderPass(88884444, 2);
-  var card := new PaymentCard(5089689782389772, 50.0);
+  var card := new PaymentCard(4444333322221111, 50.0);
+  var falseCard := new PaymentCard(5089689782389771, 50.0);
   turnstile.Initialize();
+  var test := turnstile.ProcessNFCSource(falseCard);
+  expect test == false, ""expectation violation"";
   assert pass.rides == 2;
   assert card.balance == 50.0;
   var res1 := turnstile.ProcessNFCSource(pass);
-  print res1, ""\n"";
+  print ""Operation completed?: "", res1, ""\n"";
   assert res1 ==> pass.rides == 1;
   var res2 := turnstile.ProcessNFCSource(pass);
-  print res2, ""\n"";
+  print ""Operation completed?: "", res2, ""\n"";
   assert res1 && res2 ==> pass.rides == 0;
   var res3 := turnstile.ProcessNFCSource(pass);
-  print res3, ""\n"";
+  print ""Operation completed?: "", res3, ""\n"";
   assert res1 && res2 ==> !res3;
   var res4 := turnstile.ProcessNFCSource(card);
-  print res4, ""\n"";
+  print ""Operation completed?: "", res4, ""\n"";
   assert res4 ==> card.balance == 30.0;
   var res5 := turnstile.ProcessNFCSource(card);
-  print res5, ""\n"";
+  print ""Operation completed?: "", res5, ""\n"";
   assert res4 && res5 ==> card.balance == 10.0;
   var res6 := turnstile.ProcessNFCSource(card);
-  print res6, ""\n"";
+  print ""Operation completed?: "", res6, ""\n"";
   assert res4 && res5 && !res6 ==> card.balance == 10.0;
 }
 
@@ -110,10 +113,16 @@ class Turnstile {
     ensures source.Valid()
     ensures this.state == Closed
     ensures bill == old(bill)
+    ensures !(source is RiderPass || source is PaymentCard) ==> !res ==> this.state == old(this.state)
+    ensures source is RiderPass ==> !HasKDigits((source as RiderPass).ID, 8) ==> !res
+    ensures source is PaymentCard ==> !LuhnValid((source as PaymentCard).ID) ==> !res
+    ensures res ==> source is RiderPass ==> old((source as RiderPass).rides) > 0
+    ensures res ==> source is PaymentCard ==> old((source as PaymentCard).balance) > bill
     ensures res ==> source is RiderPass ==> (source as RiderPass).rides == old((source as RiderPass).rides) - 1
     ensures res ==> source is PaymentCard ==> (source as PaymentCard).balance == old((source as PaymentCard).balance) - bill
     ensures !res ==> source is RiderPass ==> (source as RiderPass).rides == old((source as RiderPass).rides)
     ensures !res ==> source is PaymentCard ==> (source as PaymentCard).balance == old((source as PaymentCard).balance)
+    ensures !res ==> personPassed == old(personPassed)
     decreases source
   {
     if source is RiderPass {
@@ -148,8 +157,7 @@ class Turnstile {
         print ""Error in ID"", ""\n"";
         return;
       }
-      var check := LuhnCheck(ID);
-      if !check {
+      if !LuhnValid(ID) {
         this.state := Closed;
         res := false;
         print ""Failed Luhn Check"", ""\n"";
@@ -293,14 +301,45 @@ class Turnstile {
     res := digSum % 10 == 0;
   }
 
+  function LuhnValid(ID: int): bool
+    decreases ID
+  {
+    if ID < 0 then
+      false
+    else if !HasKDigits(ID, 16) then
+      false
+    else
+      var digits: seq<int> := ExtractDigits(ID); LuhnSum(digits, |digits|, false) % 10 == 0
+  }
+
+  function LuhnSum(digits: seq<int>, i: int, even: bool): int
+    requires 0 <= i <= |digits|
+    decreases i
+  {
+    if i == 0 then
+      0
+    else
+      var d: int := digits[i - 1]; var doubled: int := if even then if d * 2 > 9 then d * 2 - 9 else d * 2 else d; doubled + LuhnSum(digits, i - 1, !even)
+  }
+
+  function ExtractDigits(n: int): seq<int>
+    requires 0 <= n
+    decreases n
+  {
+    if n == 0 then
+      []
+    else
+      ExtractDigits(n / 10) + [n % 10]
+  }
+
   function HasKDigits(n: int, k: int): bool
-    requires n >= 0
     requires k >= 1
     decreases n, k
   {
-    var lower: int := Pow10(k - 1);
-    var upper: int := Pow10(k);
-    lower <= n < upper
+    if n < 0 then
+      false
+    else
+      var lower: int := Pow10(k - 1); var upper: int := Pow10(k); lower <= n < upper
   }
 
   function Pow10(exp: int): int
@@ -381,6 +420,7 @@ class RiderPass extends NFCSource, Pass {
     requires 0 <= rides
     ensures Valid()
     ensures this.rides == rides
+    ensures this.ID == id
     decreases id, rides
   {
     ID := id;
@@ -420,6 +460,7 @@ class PaymentCard extends NFCSource, Deductable {
     requires 0.0 <= balance
     ensures Valid()
     ensures this.balance == balance
+    ensures this.ID == id
     decreases id, balance
   {
     ID := id;
@@ -6119,6 +6160,9 @@ internal static class FuncExtensions {
   public static Func<U1, U2, UResult> DowncastClone<T1, T2, TResult, U1, U2, UResult>(this Func<T1, T2, TResult> F, Func<U1, T1> ArgConv1, Func<U2, T2> ArgConv2, Func<TResult, UResult> ResConv) {
     return (arg1, arg2) => ResConv(F(ArgConv1(arg1), ArgConv2(arg2)));
   }
+  public static Func<U1, U2, U3, UResult> DowncastClone<T1, T2, T3, TResult, U1, U2, U3, UResult>(this Func<T1, T2, T3, TResult> F, Func<U1, T1> ArgConv1, Func<U2, T2> ArgConv2, Func<U3, T3> ArgConv3, Func<TResult, UResult> ResConv) {
+    return (arg1, arg2, arg3) => ResConv(F(ArgConv1(arg1), ArgConv2(arg2), ArgConv3(arg3)));
+  }
 }
 // end of class FuncExtensions
 namespace _module {
@@ -6136,44 +6180,60 @@ namespace _module {
       _1_pass = _nw1;
       PaymentCard _2_card;
       PaymentCard _nw2 = new PaymentCard();
-      _nw2.__ctor(new BigInteger(5089689782389772L), new Dafny.BigRational(BigInteger.Parse("50"), BigInteger.One));
+      _nw2.__ctor(new BigInteger(4444333322221111L), new Dafny.BigRational(BigInteger.Parse("50"), BigInteger.One));
       _2_card = _nw2;
+      PaymentCard _3_falseCard;
+      PaymentCard _nw3 = new PaymentCard();
+      _nw3.__ctor(new BigInteger(5089689782389771L), new Dafny.BigRational(BigInteger.Parse("50"), BigInteger.One));
+      _3_falseCard = _nw3;
       (_0_turnstile).Initialize();
-      bool _3_res1;
+      bool _4_test;
       bool _out0;
-      _out0 = (_0_turnstile).ProcessNFCSource(_1_pass);
-      _3_res1 = _out0;
-      Dafny.Helpers.Print((_3_res1));
-      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
-      bool _4_res2;
+      _out0 = (_0_turnstile).ProcessNFCSource(_3_falseCard);
+      _4_test = _out0;
+      if (!((_4_test) == (false))) {
+        throw new Dafny.HaltException("Program.dfy(16,4): " + Dafny.Sequence<Dafny.Rune>.UnicodeFromString("expectation violation").ToVerbatimString(false));}
+      bool _5_res1;
       bool _out1;
       _out1 = (_0_turnstile).ProcessNFCSource(_1_pass);
-      _4_res2 = _out1;
-      Dafny.Helpers.Print((_4_res2));
+      _5_res1 = _out1;
+      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Operation completed?: ")).ToVerbatimString(false));
+      Dafny.Helpers.Print((_5_res1));
       Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
-      bool _5_res3;
+      bool _6_res2;
       bool _out2;
       _out2 = (_0_turnstile).ProcessNFCSource(_1_pass);
-      _5_res3 = _out2;
-      Dafny.Helpers.Print((_5_res3));
+      _6_res2 = _out2;
+      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Operation completed?: ")).ToVerbatimString(false));
+      Dafny.Helpers.Print((_6_res2));
       Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
-      bool _6_res4;
+      bool _7_res3;
       bool _out3;
-      _out3 = (_0_turnstile).ProcessNFCSource(_2_card);
-      _6_res4 = _out3;
-      Dafny.Helpers.Print((_6_res4));
+      _out3 = (_0_turnstile).ProcessNFCSource(_1_pass);
+      _7_res3 = _out3;
+      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Operation completed?: ")).ToVerbatimString(false));
+      Dafny.Helpers.Print((_7_res3));
       Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
-      bool _7_res5;
+      bool _8_res4;
       bool _out4;
       _out4 = (_0_turnstile).ProcessNFCSource(_2_card);
-      _7_res5 = _out4;
-      Dafny.Helpers.Print((_7_res5));
+      _8_res4 = _out4;
+      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Operation completed?: ")).ToVerbatimString(false));
+      Dafny.Helpers.Print((_8_res4));
       Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
-      bool _8_res6;
+      bool _9_res5;
       bool _out5;
       _out5 = (_0_turnstile).ProcessNFCSource(_2_card);
-      _8_res6 = _out5;
-      Dafny.Helpers.Print((_8_res6));
+      _9_res5 = _out5;
+      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Operation completed?: ")).ToVerbatimString(false));
+      Dafny.Helpers.Print((_9_res5));
+      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
+      bool _10_res6;
+      bool _out6;
+      _out6 = (_0_turnstile).ProcessNFCSource(_2_card);
+      _10_res6 = _out6;
+      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Operation completed?: ")).ToVerbatimString(false));
+      Dafny.Helpers.Print((_10_res6));
       Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
     }
     public static BigInteger tickCount { get {
@@ -6384,20 +6444,16 @@ namespace _module {
           Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
           return res;
         }
-        bool _5_check;
-        bool _out0;
-        _out0 = (this).LuhnCheck(_4_ID);
-        _5_check = _out0;
-        if (!(_5_check)) {
+        if (!((this).LuhnValid(_4_ID))) {
           (this).state = _module.State.create_Closed();
           res = false;
           Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Failed Luhn Check")).ToVerbatimString(false));
           Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
           return res;
         }
-        Dafny.BigRational _6_cardBal;
-        _6_cardBal = (_3_card).GetBal();
-        if (((_6_cardBal) <= (new Dafny.BigRational(BigInteger.Parse("0"), BigInteger.One))) || ((_6_cardBal) <= (this.bill))) {
+        Dafny.BigRational _5_cardBal;
+        _5_cardBal = (_3_card).GetBal();
+        if (((_5_cardBal) <= (new Dafny.BigRational(BigInteger.Parse("0"), BigInteger.One))) || ((_5_cardBal) <= (this.bill))) {
           (this).state = _module.State.create_Closed();
           res = false;
           Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Low Balance")).ToVerbatimString(false));
@@ -6490,11 +6546,64 @@ namespace _module {
       res = (Dafny.Helpers.EuclideanModulus(_2_digSum, new BigInteger(10))).Sign == 0;
       return res;
     }
+    public bool LuhnValid(BigInteger ID) {
+      if ((ID).Sign == -1) {
+        return false;
+      } else if (!((this).HasKDigits(ID, new BigInteger(16)))) {
+        return false;
+      } else {
+        Dafny.ISequence<BigInteger> _0_digits = (this).ExtractDigits(ID);
+        return (Dafny.Helpers.EuclideanModulus((this).LuhnSum(_0_digits, new BigInteger((_0_digits).Count), false), new BigInteger(10))).Sign == 0;
+      }
+    }
+    public BigInteger LuhnSum(Dafny.ISequence<BigInteger> digits, BigInteger i, bool even)
+    {
+      BigInteger _0___accumulator = BigInteger.Zero;
+      var _this = this;
+    TAIL_CALL_START: ;
+      if ((i).Sign == 0) {
+        return (BigInteger.Zero) + (_0___accumulator);
+      } else {
+        BigInteger _1_d = (digits).Select((i) - (BigInteger.One));
+        BigInteger _2_doubled = ((even) ? (((((_1_d) * (new BigInteger(2))) > (new BigInteger(9))) ? (((_1_d) * (new BigInteger(2))) - (new BigInteger(9))) : ((_1_d) * (new BigInteger(2))))) : (_1_d));
+        _0___accumulator = (_0___accumulator) + (_2_doubled);
+        Turnstile _in0 = _this;
+        Dafny.ISequence<BigInteger> _in1 = digits;
+        BigInteger _in2 = (i) - (BigInteger.One);
+        bool _in3 = !(even);
+        _this = _in0;
+        ;
+        digits = _in1;
+        i = _in2;
+        even = _in3;
+        goto TAIL_CALL_START;
+      }
+    }
+    public Dafny.ISequence<BigInteger> ExtractDigits(BigInteger n) {
+      Dafny.ISequence<BigInteger> _0___accumulator = Dafny.Sequence<BigInteger>.FromElements();
+      var _this = this;
+    TAIL_CALL_START: ;
+      if ((n).Sign == 0) {
+        return Dafny.Sequence<BigInteger>.Concat(Dafny.Sequence<BigInteger>.FromElements(), _0___accumulator);
+      } else {
+        _0___accumulator = Dafny.Sequence<BigInteger>.Concat(Dafny.Sequence<BigInteger>.FromElements(Dafny.Helpers.EuclideanModulus(n, new BigInteger(10))), _0___accumulator);
+        Turnstile _in0 = _this;
+        BigInteger _in1 = Dafny.Helpers.EuclideanDivision(n, new BigInteger(10));
+        _this = _in0;
+        ;
+        n = _in1;
+        goto TAIL_CALL_START;
+      }
+    }
     public bool HasKDigits(BigInteger n, BigInteger k)
     {
-      BigInteger _0_lower = (this).Pow10((k) - (BigInteger.One));
-      BigInteger _1_upper = (this).Pow10(k);
-      return ((_0_lower) <= (n)) && ((n) < (_1_upper));
+      if ((n).Sign == -1) {
+        return false;
+      } else {
+        BigInteger _0_lower = (this).Pow10((k) - (BigInteger.One));
+        BigInteger _1_upper = (this).Pow10(k);
+        return ((_0_lower) <= (n)) && ((n) < (_1_upper));
+      }
     }
     public BigInteger Pow10(BigInteger exp) {
       BigInteger _0___accumulator = BigInteger.One;

@@ -5,7 +5,7 @@ datatype State = Boot | Closed | Open | Processing
 const tickCount : int := 1000
 const PersonTick : int := 200
 
-class Turnstile
+class Turnstile extends BaseValidation
 {
     var state : State
     var gate : bool
@@ -67,11 +67,19 @@ class Turnstile
         ensures this.state == Closed
         ensures bill == old(bill)
 
+        ensures !(source is RiderPass || source is PaymentCard) ==> !res ==> this.state == old(this.state)
+
+        ensures source is RiderPass   ==> !HasKDigits((source as RiderPass).ID, 8) ==> !res
+        ensures source is PaymentCard ==> !LuhnValid((source as PaymentCard).ID) ==> !res
+
+        ensures res ==> source is RiderPass ==> old((source as RiderPass).rides) > 0
+        ensures res ==> source is PaymentCard ==> old((source as PaymentCard).balance) >= bill
         ensures res ==> source is RiderPass ==> (source as RiderPass).rides == old((source as RiderPass).rides) - 1
         ensures res ==> source is PaymentCard ==> (source as PaymentCard).balance == old((source as PaymentCard).balance) - bill
 
         ensures !res ==> source is RiderPass ==> (source as RiderPass).rides == old((source as RiderPass).rides)
         ensures !res ==> source is PaymentCard ==> (source as PaymentCard).balance == old((source as PaymentCard).balance)
+        ensures !res ==> personPassed == old(personPassed)
     {
         
         if source is RiderPass
@@ -118,9 +126,10 @@ class Turnstile
                 return;
             }
 
-            var check := LuhnCheck(ID);
+            //var check := LuhnCheck(ID);
 
-            if !check
+            //if !check
+            if !LuhnValid(ID)
             {
                 this.state := Closed;
                 res := false;
@@ -129,7 +138,7 @@ class Turnstile
             }
 
             var cardBal := card.GetBal();
-            if cardBal <= 0.0 || cardBal <= bill
+            if cardBal <= 0.0 || cardBal < bill
             {
                 this.state := Closed;
                 res := false;
@@ -244,7 +253,7 @@ class Turnstile
 
     }
 
-    method LuhnCheck(ID : int) returns (res : bool)
+    /*method LuhnCheck(ID : int) returns (res : bool)
         requires Valid()
         ensures Valid()
 
@@ -285,15 +294,44 @@ class Turnstile
         }
 
         res := digSum % 10 == 0;
+    }*/
+
+    function LuhnValid(ID: int): bool
+    {
+        if ID < 0 then false
+        else if !HasKDigits(ID, 16) then false
+        else
+            var digits := ExtractDigits(ID);
+            LuhnSum(digits, |digits|, false) % 10 == 0
+    }
+
+    function LuhnSum(digits: seq<int>, i: int, even: bool): int
+        requires 0 <= i <= |digits|
+        decreases i
+    {
+        if i == 0 then 0
+        else
+            var d := digits[i - 1];
+            var doubled := if even then (if d * 2 > 9 then d * 2 - 9 else d * 2) else d;
+            doubled + LuhnSum(digits, i - 1, !even)
+    }
+
+    function ExtractDigits(n: int): seq<int>
+        requires 0 <= n
+        decreases n
+    {
+        if n == 0 then []
+        else ExtractDigits(n / 10) + [n % 10]
     }
 
     function HasKDigits(n: int, k: int): bool
-        requires n >= 0
         requires k >= 1
     {
-        var lower := Pow10(k - 1);
-        var upper := Pow10(k);
-        lower <= n < upper
+        if n < 0 then false
+        else
+            var lower := Pow10(k - 1);
+            var upper := Pow10(k);
+            lower <= n < upper
     }
 
     function Pow10(exp: int): int

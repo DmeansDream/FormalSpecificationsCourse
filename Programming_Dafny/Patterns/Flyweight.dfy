@@ -46,7 +46,7 @@ module Flyweight
                 npc := new NPC(n,a,f);
                 cache := cache[n := npc];
                 return npc;
-            }
+            }   
         } 
     }
 }
@@ -92,13 +92,17 @@ method Main()
 
     var npc1 := registry.GetNPC("Bob Boblehead", "20", "Gang");
     var npc2 := registry.GetNPC("Bob Boblehead", "20", "Gang");
+    var npc6 := registry.GetNPC("Bob", "20", "Gang");
 
     assert npc1 == npc2;
+
 
     var singleton := new Singleton.NPCSingleton();
 
     var npc3 := singleton.GetNPC("Dallas", "46", "Gang");
-    var npc4 := singleton.GetNPC("Dallas", "46", "Gang");
+    var npc4 := singleton.GetNPC("Daas", "46", "Gang");
+    var npc5 := singleton.GetNPC("Chains", "39", "Gang");
 
     assert npc3 == npc4;
+    assert npc3 == npc5;
 }

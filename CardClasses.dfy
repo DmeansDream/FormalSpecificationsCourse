@@ -49,7 +49,7 @@ trait Deductable extends BaseValidation
         ensures Valid()
 
         requires 0.0 < bill
-        requires bill <= GetBal()
+        requires bill < GetBal()
 
         ensures balance == old(balance) - bill
 }
@@ -68,6 +68,7 @@ class RiderPass extends NFCSource, Pass
         requires 0 <= rides
         ensures Valid()
         ensures this.rides == rides
+        ensures this.ID == id
     {
         ID := id;
         this.rides := rides;
@@ -107,6 +108,7 @@ class PaymentCard extends NFCSource, Deductable
         ensures Valid()
         requires 0.0 <= balance
         ensures this.balance == balance
+        ensures this.ID == id
     {
         ID := id;
         this.balance := balance;

@@ -1,0 +1,71 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Admin\\source\\repos\\Dafny\\CSharpRewrite\\CSharpRewrite\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{DDAB8023-BBC9-43E8-A0DB-1C623119B936}|CSharpRewrite.csproj|c:\\users\\admin\\source\\repos\\dafny\\csharprewrite\\csharprewrite\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DDAB8023-BBC9-43E8-A0DB-1C623119B936}|CSharpRewrite.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DDAB8023-BBC9-43E8-A0DB-1C623119B936}|CSharpRewrite.csproj|c:\\users\\admin\\source\\repos\\dafny\\csharprewrite\\csharprewrite\\cardclasses.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DDAB8023-BBC9-43E8-A0DB-1C623119B936}|CSharpRewrite.csproj|solutionrelative:cardclasses.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DDAB8023-BBC9-43E8-A0DB-1C623119B936}|CSharpRewrite.csproj|c:\\users\\admin\\source\\repos\\dafny\\csharprewrite\\csharprewrite\\turnstile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DDAB8023-BBC9-43E8-A0DB-1C623119B936}|CSharpRewrite.csproj|solutionrelative:turnstile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Turnstile.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\Dafny\\CSharpRewrite\\CSharpRewrite\\Turnstile.cs",
+              "RelativeDocumentMoniker": "Turnstile.cs",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\Dafny\\CSharpRewrite\\CSharpRewrite\\Turnstile.cs",
+              "RelativeToolTip": "Turnstile.cs",
+              "ViewState": "AgIAAOAAAAAAAAAAAAAAwPIAAAAnAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-17T16:02:54.495Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "CardClasses.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\Dafny\\CSharpRewrite\\CSharpRewrite\\CardClasses.cs",
+              "RelativeDocumentMoniker": "CardClasses.cs",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\Dafny\\CSharpRewrite\\CSharpRewrite\\CardClasses.cs",
+              "RelativeToolTip": "CardClasses.cs",
+              "ViewState": "AgIAAA8AAAAAAAAAAAA1wCwAAAAWAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-17T16:02:40.342Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\Dafny\\CSharpRewrite\\CSharpRewrite\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\Dafny\\CSharpRewrite\\CSharpRewrite\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAAA8AAAA/AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-17T15:34:54.868Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
