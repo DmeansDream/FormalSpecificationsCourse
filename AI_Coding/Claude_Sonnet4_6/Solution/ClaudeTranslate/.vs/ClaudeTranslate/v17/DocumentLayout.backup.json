@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Admin\\source\\repos\\Dafny\\AI_Coding\\Claude_Sonnet4_6\\Solution\\ClaudeTranslate\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{6D2D2BB1-EEFA-4C43-9098-4B251CCCFEA4}|ClaudeTranslate.csproj|c:\\users\\admin\\source\\repos\\dafny\\ai_coding\\claude_sonnet4_6\\solution\\claudetranslate\\claudetranslate.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6D2D2BB1-EEFA-4C43-9098-4B251CCCFEA4}|ClaudeTranslate.csproj|solutionrelative:claudetranslate.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "ClaudeTranslate.cs",
+              "DocumentMoniker": "C:\\Users\\Admin\\source\\repos\\Dafny\\AI_Coding\\Claude_Sonnet4_6\\Solution\\ClaudeTranslate\\ClaudeTranslate.cs",
+              "RelativeDocumentMoniker": "ClaudeTranslate.cs",
+              "ToolTip": "C:\\Users\\Admin\\source\\repos\\Dafny\\AI_Coding\\Claude_Sonnet4_6\\Solution\\ClaudeTranslate\\ClaudeTranslate.cs",
+              "RelativeToolTip": "ClaudeTranslate.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-23T11:40:54.096Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

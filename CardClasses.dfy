@@ -6,6 +6,8 @@ trait BaseValidation
 
 trait NFCSource extends BaseValidation
 {
+    const ID : int
+
     function Read() : int
         requires Valid()
         reads this
@@ -56,7 +58,6 @@ trait Deductable extends BaseValidation
 
 class RiderPass extends NFCSource, Pass
 {
-    const ID : int
 
     ghost predicate Valid()   
         reads this
@@ -96,7 +97,6 @@ class RiderPass extends NFCSource, Pass
 
 class PaymentCard extends NFCSource, Deductable
 {
-    const ID : int
 
     ghost predicate Valid()   
     reads this

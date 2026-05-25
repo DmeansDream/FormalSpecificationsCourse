@@ -5,7 +5,7 @@ datatype State = Boot | Closed | Open | Processing
 const tickCount : int := 1000
 const PersonTick : int := 200
 
-class Turnstile extends BaseValidation
+class Turnstile
 {
     var state : State
     var gate : bool
@@ -14,7 +14,7 @@ class Turnstile extends BaseValidation
     var timerTicks : int
     var personPassed : bool
 
-    ghost predicate Valid()   
+    predicate Valid()   
         reads this
     {
         (state == Open ==> gate == true ==> timerTicks > 0 || personPassed) &&
@@ -70,6 +70,7 @@ class Turnstile extends BaseValidation
         ensures !(source is RiderPass || source is PaymentCard) ==> !res ==> this.state == old(this.state)
 
         ensures source is RiderPass   ==> !HasKDigits((source as RiderPass).ID, 8) ==> !res
+        ensures source is PaymentCard ==> !HasKDigits((source as PaymentCard).ID, 16) ==> !res
         ensures source is PaymentCard ==> !LuhnValid((source as PaymentCard).ID) ==> !res
 
         ensures res ==> source is RiderPass ==> old((source as RiderPass).rides) > 0

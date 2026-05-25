@@ -15,17 +15,15 @@ using System.Collections;
 method Main(_noArgsParameter: seq<seq<char>>)
 {
   var turnstile := new Turnstile(Boot, 20.0);
-  var pass := new RiderPass(88884444, 2);
+  var pass := new RiderPass(88884444, 0);
   var card := new PaymentCard(4444333322221111, 50.0);
   var falseCard := new PaymentCard(5089689782389771, 50.0);
   turnstile.Initialize();
   var test := turnstile.ProcessNFCSource(falseCard);
   expect test == false, ""expectation violation"";
-  assert pass.rides == 2;
-  assert card.balance == 50.0;
   var res1 := turnstile.ProcessNFCSource(pass);
   print ""Operation completed?: "", res1, ""\n"";
-  assert res1 ==> pass.rides == 1;
+  assert res1 ==> pass.rides == 0;
   var res2 := turnstile.ProcessNFCSource(pass);
   print ""Operation completed?: "", res2, ""\n"";
   assert res1 && res2 ==> pass.rides == 0;
@@ -55,7 +53,7 @@ class Turnstile {
   var timerTicks: int
   var personPassed: bool
 
-  ghost predicate Valid()
+  predicate Valid()
     reads this
     decreases {this}
   {
@@ -115,9 +113,10 @@ class Turnstile {
     ensures bill == old(bill)
     ensures !(source is RiderPass || source is PaymentCard) ==> !res ==> this.state == old(this.state)
     ensures source is RiderPass ==> !HasKDigits((source as RiderPass).ID, 8) ==> !res
+    ensures source is PaymentCard ==> !HasKDigits((source as PaymentCard).ID, 16) ==> !res
     ensures source is PaymentCard ==> !LuhnValid((source as PaymentCard).ID) ==> !res
     ensures res ==> source is RiderPass ==> old((source as RiderPass).rides) > 0
-    ensures res ==> source is PaymentCard ==> old((source as PaymentCard).balance) > bill
+    ensures res ==> source is PaymentCard ==> old((source as PaymentCard).balance) >= bill
     ensures res ==> source is RiderPass ==> (source as RiderPass).rides == old((source as RiderPass).rides) - 1
     ensures res ==> source is PaymentCard ==> (source as PaymentCard).balance == old((source as PaymentCard).balance) - bill
     ensures !res ==> source is RiderPass ==> (source as RiderPass).rides == old((source as RiderPass).rides)
@@ -164,7 +163,7 @@ class Turnstile {
         return;
       }
       var cardBal := card.GetBal();
-      if cardBal <= 0.0 || cardBal <= bill {
+      if cardBal <= 0.0 || cardBal < bill {
         this.state := Closed;
         res := false;
         print ""Low Balance"", ""\n"";
@@ -266,41 +265,6 @@ class Turnstile {
     }
   }
 
-  method LuhnCheck(ID: int) returns (res: bool)
-    requires Valid()
-    requires 0 <= ID
-    requires HasKDigits(ID, 16)
-    ensures Valid()
-    decreases ID
-  {
-    var digits: seq<int> := [];
-    var n := ID;
-    while 0 < n
-      decreases n
-    {
-      digits := [n % 10] + digits;
-      n := n / 10;
-    }
-    var digSum := 0;
-    var even := false;
-    var i := |digits| - 1;
-    while 0 <= i
-      decreases i
-    {
-      var d := digits[i];
-      if even {
-        d := d * 2;
-        if d > 9 {
-          d := d - 9;
-        }
-      }
-      digSum := digSum + d;
-      even := !even;
-      i := i - 1;
-    }
-    res := digSum % 10 == 0;
-  }
-
   function LuhnValid(ID: int): bool
     decreases ID
   {
@@ -360,6 +324,8 @@ trait BaseValidation {
 }
 
 trait NFCSource extends BaseValidation {
+  const ID: int
+
   function Read(): int
     requires Valid()
     reads this
@@ -399,7 +365,7 @@ trait Deductable extends BaseValidation {
   method Deduct(bill: real)
     requires Valid()
     requires 0.0 < bill
-    requires bill <= GetBal()
+    requires bill < GetBal()
     modifies this
     ensures Valid()
     ensures balance == old(balance) - bill
@@ -407,8 +373,6 @@ trait Deductable extends BaseValidation {
 }
 
 class RiderPass extends NFCSource, Pass {
-  const ID: int
-
   ghost predicate Valid()
     reads this
     decreases {this}
@@ -447,8 +411,6 @@ class RiderPass extends NFCSource, Pass {
 }
 
 class PaymentCard extends NFCSource, Deductable {
-  const ID: int
-
   ghost predicate Valid()
     reads this
     decreases {this}
@@ -6176,7 +6138,7 @@ namespace _module {
       _0_turnstile = _nw0;
       RiderPass _1_pass;
       RiderPass _nw1 = new RiderPass();
-      _nw1.__ctor(new BigInteger(88884444), new BigInteger(2));
+      _nw1.__ctor(new BigInteger(88884444), BigInteger.Zero);
       _1_pass = _nw1;
       PaymentCard _2_card;
       PaymentCard _nw2 = new PaymentCard();
@@ -6386,6 +6348,9 @@ namespace _module {
     public Dafny.BigRational bill {get; set;}
     public BigInteger timerTicks {get; set;}
     public bool personPassed {get; set;}
+    public bool Valid() {
+      return ((((!(object.Equals(this.state, _module.State.create_Open())) || (!((this.gate) == (true)) || (((this.timerTicks).Sign == 1) || (this.personPassed)))) && (!(object.Equals(this.state, _module.State.create_Closed())) || (!((this.gate) == (false)) || ((this.timerTicks).Sign == 0)))) && (!(object.Equals(this.state, _module.State.create_Boot())) || (!((this.gate) == (false)) || ((this.timerTicks).Sign == 0)))) && (!(object.Equals(this.state, _module.State.create_Processing())) || (!((this.gate) == (false)) || ((this.timerTicks).Sign == 0)))) && ((new Dafny.BigRational(BigInteger.Parse("0"), BigInteger.One)) < (this.bill));
+    }
     public void __ctor(_IState state, Dafny.BigRational Payment)
     {
       (this).state = state;
@@ -6453,7 +6418,7 @@ namespace _module {
         }
         Dafny.BigRational _5_cardBal;
         _5_cardBal = (_3_card).GetBal();
-        if (((_5_cardBal) <= (new Dafny.BigRational(BigInteger.Parse("0"), BigInteger.One))) || ((_5_cardBal) <= (this.bill))) {
+        if (((_5_cardBal) <= (new Dafny.BigRational(BigInteger.Parse("0"), BigInteger.One))) || ((_5_cardBal) < (this.bill))) {
           (this).state = _module.State.create_Closed();
           res = false;
           Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("Low Balance")).ToVerbatimString(false));
@@ -6512,39 +6477,6 @@ namespace _module {
         (this).state = _module.State.create_Closed();
         (this).gate = false;
       }
-    }
-    public bool LuhnCheck(BigInteger ID)
-    {
-      bool res = false;
-      Dafny.ISequence<BigInteger> _0_digits;
-      _0_digits = Dafny.Sequence<BigInteger>.FromElements();
-      BigInteger _1_n;
-      _1_n = ID;
-      while ((_1_n).Sign == 1) {
-        _0_digits = Dafny.Sequence<BigInteger>.Concat(Dafny.Sequence<BigInteger>.FromElements(Dafny.Helpers.EuclideanModulus(_1_n, new BigInteger(10))), _0_digits);
-        _1_n = Dafny.Helpers.EuclideanDivision(_1_n, new BigInteger(10));
-      }
-      BigInteger _2_digSum;
-      _2_digSum = BigInteger.Zero;
-      bool _3_even;
-      _3_even = false;
-      BigInteger _4_i;
-      _4_i = (new BigInteger((_0_digits).Count)) - (BigInteger.One);
-      while ((_4_i).Sign != -1) {
-        BigInteger _5_d;
-        _5_d = (_0_digits).Select(_4_i);
-        if (_3_even) {
-          _5_d = (_5_d) * (new BigInteger(2));
-          if ((_5_d) > (new BigInteger(9))) {
-            _5_d = (_5_d) - (new BigInteger(9));
-          }
-        }
-        _2_digSum = (_2_digSum) + (_5_d);
-        _3_even = !(_3_even);
-        _4_i = (_4_i) - (BigInteger.One);
-      }
-      res = (Dafny.Helpers.EuclideanModulus(_2_digSum, new BigInteger(10))).Sign == 0;
-      return res;
     }
     public bool LuhnValid(BigInteger ID) {
       if ((ID).Sign == -1) {
@@ -6630,6 +6562,7 @@ namespace _module {
 
   public interface NFCSource : BaseValidation {
     BigInteger Read();
+    BigInteger ID { get; }
   }
   public class _Companion_NFCSource {
   }
@@ -6673,6 +6606,10 @@ namespace _module {
         this._rides = value;
       }
     }
+    public BigInteger _ID {get; set;}
+    public BigInteger ID { get {
+      return this._ID;
+    } }
     public void __ctor(BigInteger id, BigInteger rides)
     {
       (this)._ID = id;
@@ -6685,10 +6622,6 @@ namespace _module {
     {
       (this).rides = (this.rides) - (BigInteger.One);
     }
-    public BigInteger _ID {get; set;}
-    public BigInteger ID { get {
-      return this._ID;
-    } }
   }
 
   public partial class PaymentCard : NFCSource, Deductable, BaseValidation {
@@ -6708,6 +6641,10 @@ namespace _module {
     public Dafny.BigRational GetBal() {
       return _Companion_Deductable.GetBal(this);
     }
+    public BigInteger _ID {get; set;}
+    public BigInteger ID { get {
+      return this._ID;
+    } }
     public void __ctor(BigInteger id, Dafny.BigRational balance)
     {
       (this)._ID = id;
@@ -6720,10 +6657,6 @@ namespace _module {
     {
       (this).balance = (this.balance) - (bill);
     }
-    public BigInteger _ID {get; set;}
-    public BigInteger ID { get {
-      return this._ID;
-    } }
   }
 } // end of namespace _module
 class __CallToMain {

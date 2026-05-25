@@ -74,81 +74,6 @@ module ProgramModule {
     assert turnstile.IsClosed();
     assert tripod.IsClosed();
 
-    print "\n";
-    print "============================================================\n";
-    print "     METRO TURNSTILE NFC SUBSYSTEM — VERIFICATION TESTS     \n";
-    print "============================================================\n\n";
-
-    // ================================================================
-    // T01 — Valid PaymentCard, sufficient balance, passenger walks
-    // Spec req 1, 2, 3, 5, 6, 8, 9, 11, 12, 13, 16
-    // ================================================================
-    /*PrintBanner("T01: PaymentCard | balance=200 | fare=100 | passenger walks");
-    {
-      var card := new PaymentCard(ValidCardNumber(), 200, 100);
-      //assert card.IsValid();
-      //assert card.HasSufficientFunds();
-      //assert card.CurrentValue() == 200;
-
-      var r := turnstile.ProcessNFC(card, true);
-      PrintResult("Result", r);
-      PrintBalance("Balance after (expected 100)", card.balance);
-
-      // Spec req 5: exactly 1 fare deducted
-      //assert card.CurrentValue() == 100;
-      // Spec req 9: passenger walked through -> Admitted
-      //assert r == Admitted;
-      // Spec req 11, 16: turnstile back to Closed
-      AssertTurnstileClosedAndValid(turnstile, tripod);
-    }
-    print "\n";*/
-
-    // ================================================================
-    // T02 — Valid PaymentCard, sufficient balance, passenger does NOT walk
-    // Spec req 1, 5, 8, 10, 11, 13
-    // ================================================================
-    /*PrintBanner("T02: PaymentCard | balance=100 | fare=100 | passenger times out");
-    {
-      var card := new PaymentCard(ValidCardNumber(), 100, 100);
-      //assert card.IsValid();
-      //assert card.HasSufficientFunds();
-
-      var r := turnstile.ProcessNFC(card, false);
-      PrintResult("Result", r);
-      PrintBalance("Balance after (expected 0)", card.balance);
-
-      // Spec req 5: deducted
-      // Spec req 10: timer expired without passenger -> TimedOut
-      //assert r == TimedOut ==> card.balance == 0;
-    
-      // Spec req 11: still closed
-      AssertTurnstileClosedAndValid(turnstile, tripod);
-    }
-    print "\n";*/
-
-    // ================================================================
-    // T03 — Valid PaymentCard, zero balance -> Denied
-    // Spec req 4, 7, 13, 15
-    // ================================================================
-    /*PrintBanner("T03: PaymentCard | balance=0 | fare=100 -> Denied (no funds)");
-    {
-      var card := new PaymentCard(ValidCardNumber(), 0, 100);
-      //assert card.IsValid();
-      assert !card.HasSufficientFunds();
-      var valueBefore := card.balance;
-
-      var r := turnstile.ProcessNFC(card, true);
-      PrintResult("Result", r);
-      PrintBalance("Balance after (expected 0, unchanged)", card.balance);
-
-      // Spec req 7: balance unchanged on denial
-      //assert card.balance == valueBefore;
-      assert r == Denied;
-      // Spec req 13: gate was never opened
-      AssertTurnstileClosedAndValid(turnstile, tripod);
-    }
-    print "\n";*/
-
     // ================================================================
     // T04 — Valid PaymentCard, balance < fare -> Denied
     // Spec req 4, 7, 13
@@ -171,26 +96,6 @@ module ProgramModule {
     }
     print "\n";
 
-    // ================================================================
-    // T05 — Valid RiderPass, rides remaining, passenger walks through
-    // Spec req 1, 3, 5, 6, 9, 11, 16
-    // ================================================================
-    /*PrintBanner("T05: RiderPass | rides=5 | passenger walks through");
-    {
-      var pass := new RiderPass(ValidPassNumber(), 5);
-      assert pass.IsValid();
-      assert pass.HasSufficientFunds();
-
-      var r := turnstile.ProcessNFC(pass, true);
-      PrintResult("Result", r);
-      PrintBalance("Rides after (expected 4)", pass.ridesRemaining);
-
-      // Spec req 5: exactly 1 ride deducted
-      //assert pass.ridesRemaining == 4;
-      //assert r == Admitted;
-      AssertTurnstileClosedAndValid(turnstile, tripod);
-    }
-    print "\n";*/
 
     // ================================================================
     // T06 — Valid RiderPass, rides remaining, passenger does NOT walk
@@ -212,50 +117,6 @@ module ProgramModule {
       AssertTurnstileClosedAndValid(turnstile, tripod);
     }
     print "\n";
-
-    // ================================================================
-    // T07 — Valid RiderPass, 0 rides remaining -> Denied
-    // Spec req 4, 7, 13, 15
-    // ================================================================
-    /*PrintBanner("T07: RiderPass | rides=0 -> Denied (no rides left)");
-    {
-      var pass := new RiderPass(ValidPassNumber(), 0);
-      assert pass.IsValid();
-      assert !pass.HasSufficientFunds();
-      var valuesBefore := pass.CurrentValue();
-
-      var r := turnstile.ProcessNFC(pass, true);
-      PrintResult("Result", r);
-      PrintBalance("Rides after (expected 0, unchanged)", pass.CurrentValue());
-
-      // Spec req 7: rides unchanged
-      assert pass.CurrentValue() == valuesBefore;
-      assert r == Denied;
-      // Spec req 13: gate never opened
-      AssertTurnstileClosedAndValid(turnstile, tripod);
-    }
-    print "\n";*/
-
-    // ================================================================
-    // T08 — Static rejection: invalid card IDs (Spec req 3, 15)
-    // These are verified by Dafny's precondition system at verify time.
-    // The following would fail verification if uncommented:
-    //
-    //   var badLuhn := new PaymentCard([1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6], 500, 100);
-    //   // FAILS: requires LuhnValid(cardId) is violated -> verification error
-    //
-    //   var shortId := new PaymentCard([1,2,3,4], 500, 100);
-    //   // FAILS: requires |cardId| == 16 is violated -> verification error
-    //
-    //   var shortPass := new RiderPass([1,2,3], 10);
-    //   // FAILS: requires |pid| == 8 is violated -> verification error
-    // ================================================================
-    /*PrintBanner("T08: Static card/pass validation (Spec req 3, 15)");
-    print "  Invalid PaymentCard (bad Luhn)    -> REJECTED at verify time (precondition)\n";
-    print "  Invalid PaymentCard (short ID)    -> REJECTED at verify time (precondition)\n";
-    print "  Invalid RiderPass   (short ID)    -> REJECTED at verify time (precondition)\n";
-    print "  [Dafny statically prevents construction of malformed sources]\n";
-    print "\n";*/
 
     // ================================================================
     // T09 — Sequential PaymentCard transactions; balance drains correctly

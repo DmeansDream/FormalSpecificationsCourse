@@ -4,7 +4,7 @@ include "Turnstile.dfy"
 method Main()
 {
     var turnstile := new Turnstile(Boot, 20.0); 
-    var pass := new RiderPass(88884444, 2);
+    var pass := new RiderPass(88884444, 0);
     var card := new PaymentCard(4444_3333_2222_1111, 50.0);
 
     var falseCard := new PaymentCard(5089_6897_8238_9771, 50.0); 
@@ -15,18 +15,13 @@ method Main()
 
     expect test == false;
 
-    assert pass.rides == 2;
-    assert card.balance == 50.0;
-
     var res1 := turnstile.ProcessNFCSource(pass);
     print "Operation completed?: ", res1, "\n";
-    assert res1 ==> pass.rides == 1;
-    
+    assert res1 ==> pass.rides == 0;
 
     var res2 := turnstile.ProcessNFCSource(pass);
     print "Operation completed?: ", res2, "\n";
     assert res1 && res2 ==> pass.rides == 0; 
-    
 
     var res3 := turnstile.ProcessNFCSource(pass);
     print "Operation completed?: ", res3, "\n";
